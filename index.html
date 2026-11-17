@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="color-scheme" content="light dark">
+<title>Fuga da Galinha</title>
+<style>
+:root{color-scheme:light dark;--bg:#f4f0e5;--panel:#fffaf0;--ink:#28251f;--muted:#716b60;--accent:#d97706;--line:#d8cdb9}
+@media(prefers-color-scheme:dark){:root{--bg:#171914;--panel:#24281f;--ink:#f4f0e5;--muted:#c2bba9;--accent:#f4a62a;--line:#454b3c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;min-height:100vh;padding:12px}
+#app{width:min(100%,1000px);display:grid;gap:10px}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+h1{font-size:clamp(1.25rem,3vw,1.8rem);margin:0} .sub{color:var(--muted);font-size:.88rem}
+#frame{position:relative;width:100%;aspect-ratio:8/5;background:#20251e;border:3px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 12px 35px #0002}
+canvas{display:block;width:100%;height:100%;touch-action:none;image-rendering:pixelated}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:#111a;backdrop-filter:blur(3px)}
+.panel{width:min(620px,96%);max-height:94%;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:clamp(14px,3vw,24px);box-shadow:0 12px 35px #0005}
+.panel h2{margin:0 0 8px;font-size:clamp(1.35rem,4vw,2rem)}.panel p{margin:7px 0;color:var(--muted)}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:11px 16px;background:var(--accent);color:#21180b;cursor:pointer}
+button:disabled{opacity:.42;cursor:not-allowed}button.secondary{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+.card{border:2px solid var(--line);border-radius:12px;padding:12px;background:color-mix(in srgb,var(--panel),var(--bg) 35%);display:flex;flex-direction:column;gap:6px;min-height:145px}
+.card.common{border-color:#9ca3af}.card.rare{border-color:#3b82f6}.card.epic{border-color:#a855f7}.card strong{font-size:1rem}.card small{color:var(--muted)}
+.card button{margin-top:auto;padding:8px}.hud{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;font-weight:700}
+.hud span{background:var(--panel);border:1px solid var(--line);padding:6px 10px;border-radius:9px}
+#specialBtn{position:absolute;right:12px;bottom:12px;z-index:2;border-radius:50%;width:72px;height:72px;padding:5px;background:#f4b942;color:#241805;border:3px solid #fff8;box-shadow:0 3px 12px #0005}
+#pauseHint{font-size:.8rem;color:var(--muted)}
+@media(max-width:560px){body{padding:5px}#app{gap:6px}.cards{grid-template-columns:1fr}.card{min-height:115px}.panel{padding:12px}#specialBtn{width:62px;height:62px;font-size:.78rem}}
+</style>
+</head>
+<body>
+<div id="app">
+<header><div><h1>🐔 Fuga da Galinha</h1><div class="sub">Fuja antes de virar jantar!</div></div><div id="pauseHint">Mouse: mover + segurar clique para atirar · Espaço: especial · P/Esc: pausa</div></header>
+<div class="hud" id="hud" aria-live="polite">
+  <span id="health">❤️❤️❤️❤️❤️</span><span id="eggs">🥚 0</span><span id="wave">Onda 1</span><span id="scene">Fazenda</span><span id="specialHud">Especial: pronto</span>
+</div>
+<div id="frame">
+<canvas id="game" width="800" height="500" aria-label="Arena do jogo"></canvas>
+<button id="specialBtn" title="Usar habilidade especial">🐔<br>Especial</button>
+<div class="overlay" id="overlay">
+ <div class="panel">
+  <h2>🐔 Fuga da Galinha</h2>
+  <p><b>Fuja antes de virar jantar!</b> Sobreviva às ondas, colete ovos e compre melhorias para resistir aos cozinheiros e seus comparsas.</p>
+  <p><b>Controles:</b> mova o cursor para guiar a galinha; segure o clique esquerdo para lançar ovos na direção da mira. No celular, arraste para mover e use o botão Especial. Tecla Espaço ativa o especial; P ou Esc pausa.</p>
+  <p>O galo gigante pode virar seu melhor amigo. Ou seu último recurso. 🐓</p>
+  <div class="actions"><button id="playBtn">Jogar</button></div>
+ </div>
+</div>
+</div>
+<footer class="sub">Dica: não fique encurralado. Ovos coletados financiam as cartas entre as ondas.</footer>
+</div>
+<script>
+"use strict";
+
+/* =========================================================
+   CONFIGURAÇÃO CENTRAL — ajuste aqui o balanceamento do jogo
+   ========================================================= */
+const CONFIG = {
+  MODO_CONTROLE: "A", // "A": clique para atirar; "B": automático; "C": WASD + mouse para mirar
+  PLAYER: { velocidade: 235, aceleracao: 900, raio: 15, vidaInicial: 5, invulnerabilidade: 1.0, knockback: 185, velocidadeAtirando: 0.68 },
+  COMBATE: { danoOvo: 22, velocidadeOvo: 470, cadencia: 0.42, alcanceOvo: 520, projeteis: 1, dispersao: 0.16, raioOvo: 5 },
+  ONDAS: { inimigosBase: 7, inimigosPorOnda: 2, vidaPorOnda: 0.15, danoPorOnda: 0.045, intervaloSpawnBase: 1.15, intervaloSpawnMin: 0.34, duracaoBanner: 1.45, bonusOvos: 3, chefeA cada: 5 },
+  ECONOMIA: { chanceOvoComum: 0.35, chanceOvoRapido: 0.20, chanceOvoTanque: 0.80, ovosChefe: 9, tempoVidaDrop: 13, raioAtracao: 92, velocidadeAtracao: 260, bonusFimOnda: 3, custoBase: 5, aumentoCompra: 1.32 },
+  ESPECIAL: { recarga: 20, reducaoPorAbate: 0.75, raio: 112, dano: 18, atordoamento: 2.0, tremor: 0.22 },
+  GALO: { duracao: 10, recargaGolpe: 0.85, dano: 26, alcance: 105, melhoriaDano: 9, melhoriaAlcance: 9 },
+  CHEFE: { vidaBase: 850, velocidade: 58, dano: 2, raio: 34, invocaA cada: 3.8, quantidadeInvocada: 2 },
+  CARTAS: { quantidadeAleatoria: 3, curaPenas: 1, maxProjeteis: 3 },
+  CENARIOS: {
+    fazenda: { nome:"Fazenda", ondas:[1,2], fundo:"#759c55", tipos:["fazendeiro","fazendeiroRapido","fazendeiroTanque"] },
+    cozinha: { nome:"Cozinha", ondas:[3,4,5], fundo:"#c8d6d4", tipos:["cozinheiro","cozinheiroRapido","cozinheiroTanque"] },
+    feira: { nome:"Feira", ondas:[6,7], fundo:"#d8b879", tipos:["feirante","feiranteRapido","feiranteTanque"] },
+    restaurante: { nome:"Restaurante", ondas:[8,9,10], fundo:"#a87953", tipos:["garcom","garcomRapido","maitre"] }
+  },
+  INIMIGOS: {
+    fazendeiro:{nome:"Fazendeiro",sprite:"👨‍🌾",vida:58,velocidade:72,raio:15,dano:1,drop:"comum"},
+    fazendeiroRapido:{nome:"Fazendeiro ligeiro",sprite:"🏃‍♂️",vida:30,velocidade:122,raio:12,dano:1,drop:"rapido"},
+    fazendeiroTanque:{nome:"Fazendeiro tanque",sprite:"🧑‍🌾",vida:145,velocidade:43,raio:21,dano:2,drop:"tanque"},
+    cozinheiro:{nome:"Cozinheiro",sprite:"👨‍🍳",vida:64,velocidade:76,raio:15,dano:1,drop:"comum"},
+    cozinheiroRapido:{nome:"Cozinheiro ligeiro",sprite:"🏃‍🍳",vida:34,velocidade:128,raio:12,dano:1,drop:"rapido"},
+    cozinheiroTanque:{nome:"Cozinheiro tanque",sprite:"🧑‍🍳",vida:158,velocidade:45,raio:21,dano:2,drop:"tanque"},
+    feirante:{nome:"Feirante",sprite:"🧑‍🌾",vida:72,velocidade:80,raio:15,dano:1,drop:"comum"},
+    feiranteRapido:{nome:"Feirante ligeiro",sprite:"🏃",vida:37,velocidade:133,raio:12,dano:1,drop:"rapido"},
+    feiranteTanque:{nome:"Feirante grandão",sprite:"🧔",vida:170,velocidade:46,raio:22,dano:2,drop:"tanque"},
+    garcom:{nome:"Garçom",sprite:"🤵",vida:78,velocidade:84,raio:15,dano:1,drop:"comum"},
+    garcomRapido:{nome:"Garçom apressado",sprite:"🏃‍♂️",vida:40,velocidade:138,raio:12,dano:1,drop:"rapido"},
+    maitre:{nome:"Maître",sprite:"🎩",vida:185,velocidade:48,raio:22,dano:2,drop:"tanque"}
+  }
+};
+
+/* ===================== DADOS E ESTADO ===================== */
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const overlay=document.getElementById("overlay"),playBtn=document.getElementById("playBtn"),specialBtn=document.getElementById("specialBtn");
+const ui={health:document.getElementById("health"),eggs:document.getElementById("eggs"),wave:document.getElementById("wave"),scene:document.getElementById("scene"),special:document.getElementById("specialHud")};
+const STATES={INTRO:"INTRO",FADE_OUT:"FADE_OUT",JOGANDO:"JOGANDO",LOJA:"LOJA",TROCA:"TROCA_DE_CENARIO",GAME_OVER:"GAME_OVER",PAUSA:"PAUSA"};
+let state=STATES.INTRO,previousState=STATES.JOGANDO,fade={active:false,alpha:0,phase:0,duration:.6,callback:null};
+let lastTime=0,elapsed=0,shake=0,banner="",bannerTime=0,pausedFrom=STATES.JOGANDO;
+let wave=1,sceneKey="fazenda",eggs=0,kills=0,spawned=0,spawnTimer=0,spawnTarget=0,shopCycle=0;
+let player, enemies=[],shots=[],drops=[],particles=[],floatTexts=[],chicks=[],boss=null,rooster=null;
+let mouse={x:400,y:250,down:false,inside:false},keys={},touches=new Map(),touchMove=null,touchFire=false;
+let upgradesBought={},stats={},specialCooldown=0,galoLevel=0,galoTimer=0,galoAttackTimer=0,shockEffects=[];
+let introFeathers=Array.from({length:18},()=>({x:Math.random()*800,y:Math.random()*500,s:12+Math.random()*14,v:18+Math.random()*30}));
+
+const rand=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function makePlayer(){return {x:400,y:250,vx:0,vy:0,health:CONFIG.PLAYER.vidaInicial,maxHealth:CONFIG.PLAYER.vidaInicial,invuln:0,fire:0,faceX:1,faceY:0,damage:CONFIG.COMBATE.danoOvo,fireRate:CONFIG.COMBATE.cadencia,projectiles:CONFIG.COMBATE.projeteis,speed:CONFIG.PLAYER.velocidade,magnet:CONFIG.ECONOMIA.raioAtracao,eggValue:1};}
+function getSceneForWave(n){for(const [key,s] of Object.entries(CONFIG.CENARIOS)){if(n>=s.ondas[0]&&n<=s.ondas[1])return key;}return "restaurante";}
+function isBossWave(n){return n%CONFIG.ONDAS["chefe A cada"]===0;}
+function getEnemyTypes(){return CONFIG.CENARIOS[sceneKey].tipos;}
+function clearArena(){enemies=[];shots=[];drops=[];particles=[];floatTexts=[];chicks=[];boss=null;rooster=null;shockEffects=[];}
+function resetRun(){wave=1;sceneKey="fazenda";eggs=0;kills=0;spawned=0;spawnTimer=0;specialCooldown=0;galoLevel=0;galoTimer=0;galoAttackTimer=0;upgradesBought={};stats={};player=makePlayer();clearArena();startWave();}
+function fadeTo(callback,duration=.6){fade={active:true,alpha:0,phase:1,duration,callback};state=STATES.FADE_OUT;}
+function startGame(){fadeTo(()=>{resetRun();overlay.style.display="none";},.6);}
+function startWave(){clearArena();spawned=0;const bossWave=isBossWave(wave);spawnTarget=bossWave?Math.max(7,CONFIG.ONDAS.inimigosBase+wave*CONFIG.ONDAS.inimigosPorOnda):CONFIG.ONDAS.inimigosBase+wave*CONFIG.ONDAS.inimigosPorOnda;spawnTimer=.55;banner=bossWave?"⚠️ CHEFE!":"Onda "+wave;bannerTime=CONFIG.ONDAS.duracaoBanner;state=STATES.JOGANDO;if(bossWave)spawnBoss();}
+function spawnBoss(){boss={x:400,y:65,vx:0,vy:0,r:CONFIG.CHEFE.raio,hp:CONFIG.CHEFE.vidaBase*Math.pow(1+CONFIG.ONDAS.vidaPorOnda,wave-1),maxHp:CONFIG.CHEFE.vidaBase*Math.pow(1+CONFIG.ONDAS.vidaPorOnda,wave-1),attack:CONFIG.CHEFE.dano,invoke:CONFIG.CHEFE["invoca A cada"],hit:0};}
+function spawnEnemy(type,fromBoss=false){const def=CONFIG.INIMIGOS[type];if(!def)return;const side=Math.floor(Math.random()*4);let x=side===0?rand(0,800):side===1?rand(0,800):side===2?-18:818;let y=side===2||side===3?rand(0,500):side===0?-18:518;const scale=Math.pow(1+CONFIG.ONDAS.vidaPorOnda,wave-1);enemies.push({type,x,y,r:def.raio,hp:def.vida*scale,maxHp:def.vida*scale,speed:def.velocidade*(1+Math.min(.22,(wave-1)*.012)),damage:def.dano,stun:0,hit:0,fromBoss});}
+function chooseEnemyType(){const types=getEnemyTypes();if(wave<3)return types[0];const roll=Math.random();return types[roll<.55?0:roll<.79?1:2];}
+function shoot(){if(player.fire>0)return;let tx=mouse.x,ty=mouse.y;if(CONFIG.MODO_CONTROLE==="B"){const target=nearestEnemy();if(!target)return;tx=target.x;ty=target.y;}const dx=tx-player.x,dy=ty-player.y,len=Math.hypot(dx,dy)||1;player.faceX=dx/len;player.faceY=dy/len;const count=player.projectiles;for(let i=0;i<count;i++){const angle=Math.atan2(dy,dx)+(i-(count-1)/2)*CONFIG.COMBATE.dispersao;shots.push({x:player.x+Math.cos(angle)*18,y:player.y+Math.sin(angle)*18,vx:Math.cos(angle)*CONFIG.COMBATE.velocidadeOvo,vy:Math.sin(angle)*CONFIG.COMBATE.velocidadeOvo,life:CONFIG.COMBATE.alcanceOvo/CONFIG.COMBATE.velocidadeOvo,damage:player.damage,r:CONFIG.COMBATE.raioOvo});}player.fire=player.fireRate;}
+function nearestEnemy(){let best=null,bestD=Infinity;for(const e of enemies){const d=dist(player,e);if(d<bestD){best=e;bestD=d;}}if(boss){const d=dist(player,boss);if(d<bestD){best=boss;}}return best;}
+function useSpecial(){if(state!==STATES.JOGANDO||specialCooldown>0)return;specialCooldown=CONFIG.ESPECIAL.recarga;shockEffects.push({x:player.x,y:player.y,r:0,max:CONFIG.ESPECIAL.raio,t:0});shake=CONFIG.ESPECIAL.tremor;for(const e of enemies){if(dist(player,e)<CONFIG.ESPECIAL.raio+e.r){e.hp-=CONFIG.ESPECIAL.dano;e.stun=CONFIG.ESPECIAL.atordoamento;floatTexts.push({x:e.x,y:e.y-18,text:"CACAREJO!",life:.7,color:"#ffe36b"});if(e.hp<=0)killEnemy(e);}}if(boss&&dist(player,boss)<CONFIG.ESPECIAL.raio+boss.r){boss.hp-=CONFIG.ESPECIAL.dano;boss.hit=.12;}}
+function killEnemy(e){const i=enemies.indexOf(e);if(i<0)return;enemies.splice(i,1);kills++;specialCooldown=Math.max(0,specialCooldown-CONFIG.ESPECIAL.reducaoPorAbate);for(let p=0;p<7;p++)particles.push({x:e.x,y:e.y,vx:rand(-85,85),vy:rand(-85,85),life:rand(.3,.7),emoji:"🪶"});const chance=e.type.includes("Rapido")?CONFIG.ECONOMIA.chanceOvoRapido:e.type.includes("Tanque")||e.type==="maitre"?CONFIG.ECONOMIA.chanceOvoTanque:CONFIG.ECONOMIA.chanceOvoComum;if(Math.random()<chance)drops.push({x:e.x,y:e.y,r:8,life:CONFIG.ECONOMIA.tempoVidaDrop,value:player.eggValue});}
+function damagePlayer(amount,fromX,fromY){if(player.invuln>0)return;player.health-=Math.max(1,amount);player.invuln=CONFIG.PLAYER.invulnerabilidade;const dx=player.x-fromX,dy=player.y-fromY,len=Math.hypot(dx,dy)||1;player.vx+=dx/len*CONFIG.PLAYER.knockback;player.vy+=dy/len*CONFIG.PLAYER.knockback;floatTexts.push({x:player.x,y:player.y-25,text:"-"+amount,life:.8,color:"#ff7777"});if(player.health<=0){player.health=0;gameOver();}}
+function gameOver(){fadeTo(()=>{state=STATES.GAME_OVER;showGameOver();},.45);}
+function showGameOver(){overlay.innerHTML=`<div class="panel"><h2>🍳 Fim de jogo!</h2><p>A galinha chegou à <b>onda ${wave}</b>.</p><p>Inimigos derrotados: <b>${kills}</b> · Ovos restantes: <b>${eggs}</b></p><div class="actions"><button id="retryBtn">Tentar de novo</button></div></div>`;overlay.style.display="flex";document.getElementById("retryBtn").onclick=()=>{overlay.style.display="none";fadeTo(()=>{resetRun();},.6);};}
+function finishWave(){eggs+=CONFIG.ECONOMIA.bonusFimOnda+CONFIG.ONDAS.bonusOvos;state=STATES.LOJA;showShop();}
+function cardPool(){return [
+{id:"damage",icon:"🥚",name:"Bicada Forte",desc:"+20% de dano dos ovos.",rarity:"common",apply:()=>player.damage*=1.2,base:5},
+{id:"speed",icon:"💨",name:"Pés Ligeiros",desc:"+9% de velocidade.",rarity:"common",apply:()=>player.speed*=1.09,base:5},
+{id:"rate",icon:"🐣",name:"Chocadeira Turbo",desc:"Atira 12% mais rápido.",rarity:"rare",apply:()=>player.fireRate*=.88,base:6},
+{id:"health",icon:"❤️",name:"Penas Grossas",desc:"+1 coração e recupera 1 coração.",rarity:"rare",apply:()=>{player.maxHealth++;player.health=Math.min(player.maxHealth,player.health+CONFIG.CARTAS.curaPenas);},base:7},
+{id:"value",icon:"✨",name:"Ovo de Ouro",desc:"Drops valem +1 ovo.",rarity:"epic",apply:()=>player.eggValue++,base:8},
+{id:"triple",icon:"🎯",name:"Tiro Triplo",desc:"Dispara +1 ovo por ataque (máx. 3).",rarity:"epic",apply:()=>player.projectiles=Math.min(CONFIG.CARTAS.maxProjeteis,player.projectiles+1),base:9},
+{id:"armor",icon:"🛡️",name:"Casco de Ovo",desc:"Reduz dano recebido em 1 (mínimo 1).",rarity:"rare",apply:()=>{player.armor=(player.armor||0)+1;},base:7},
+{id:"magnet",icon:"🧲",name:"Ímã de Ovos",desc:"+35% de alcance de coleta.",rarity:"common",apply:()=>player.magnet*=1.35,base:5}
+];}
+function cardCost(c){const n=upgradesBought[c.id]||0;return Math.ceil(c.base*Math.pow(CONFIG.ECONOMIA.aumentoCompra,n));}
+function showShop(){const pool=cardPool().sort(()=>Math.random()-.5).slice(0,CONFIG.CARTAS.quantidadeAleatoria);const special={id:"rooster",icon:"🐓",name:"Galo Gigante",desc:galoLevel?`Melhora dano e alcance do aliado (nível ${galoLevel+1}).`:"Um galo acompanha você e golpeia inimigos próximos.",rarity:"epic",base:12};const cards=[...pool,special];overlay.innerHTML=`<div class="panel"><h2>🛒 Loja da fazenda</h2><p>Onda ${wave} concluída! Você recebeu ovos de bônus. Escolha uma melhoria ou siga sem comprar.</p><p><b>🥚 Ovos disponíveis: <span id="shopEggs">${eggs}</span></b></p><div class="cards" id="shopCards"></div><div class="actions"><button id="nextWave">Próxima onda →</button></div></div>`;overlay.style.display="flex";const grid=document.getElementById("shopCards");for(const c of cards){const cost=c.id==="rooster"?Math.ceil(special.base*Math.pow(CONFIG.ECONOMIA.aumentoCompra,galoLevel)):cardCost(c);const div=document.createElement("div");div.className="card "+c.rarity;div.innerHTML=`<strong>${c.icon} ${c.name}</strong><small>${c.desc}</small><small>Raridade: ${c.rarity==="common"?"Comum":c.rarity==="rare"?"Rara":"Épica"} · 🥚 ${cost}</small>`;const btn=document.createElement("button");btn.textContent="Comprar";btn.disabled=eggs<cost||(c.id==="triple"&&player.projectiles>=CONFIG.CARTAS.maxProjeteis);btn.onclick=()=>{if(eggs<cost)return;eggs-=cost;if(c.id==="rooster"){galoLevel++;}else{c.apply();upgradesBought[c.id]=(upgradesBought[c.id]||0)+1;}document.getElementById("shopEggs").textContent=eggs;btn.textContent="Comprado ✓";btn.disabled=true;};div.appendChild(btn);grid.appendChild(div);}document.getElementById("nextWave").onclick=nextWave;}
+function nextWave(){overlay.style.display="none";const next=wave+1,newScene=getSceneForWave(next);if(newScene!==sceneKey){fadeTo(()=>{sceneKey=newScene;wave=next;banner="📍 "+CONFIG.CENARIOS[sceneKey].nome;bannerTime=1.6;startWave();},.65);}else{wave=next;startWave();}}
+
+function update(dt){
+ elapsed+=dt;if(state===STATES.INTRO){for(const f of introFeathers){f.y+=f.v*dt;if(f.y>510){f.y=-10;f.x=rand(0,800);}}return;}
+ if(fade.active){fade.alpha=fade.phase===1?Math.min(1,fade.alpha+dt/fade.duration):Math.max(0,fade.alpha-dt/fade.duration);if(fade.phase===1&&fade.alpha>=1){fade.callback?.();fade.phase=2;}else if(fade.phase===2&&fade.alpha<=0){fade.active=false;if(state===STATES.FADE_OUT)state=STATES.JOGANDO;}return;}
+ if(state!==STATES.JOGANDO)return;
+ bannerTime=Math.max(0,bannerTime-dt);player.invuln=Math.max(0,player.invuln-dt);player.fire=Math.max(0,player.fire-dt);specialCooldown=Math.max(0,specialCooldown-dt);if(shake>0)shake=Math.max(0,shake-dt);
+ updatePlayer(dt);
+ const bossWave=isBossWave(wave);
+ if(spawned<spawnTarget){spawnTimer-=dt;const interval=Math.max(CONFIG.ONDAS.intervaloSpawnMin,CONFIG.ONDAS.intervaloSpawnBase-wave*.045);if(spawnTimer<=0){spawnEnemy(chooseEnemyType());spawned++;spawnTimer=interval;}}
+ if(boss){boss.invoke-=dt;boss.hit=Math.max(0,boss.hit-dt);const dx=player.x-boss.x,dy=player.y-boss.y,len=Math.hypot(dx,dy)||1;boss.x+=dx/len*CONFIG.CHEFE.velocidade*dt;boss.y+=dy/len*CONFIG.CHEFE.velocidade*dt;if(boss.invoke<=0){for(let i=0;i<CONFIG.CHEFE.quantidadeInvocada;i++){const types=Object.keys(CONFIG.INIMIGOS);spawnEnemy(types[Math.floor(Math.random()*types.length)],true);}boss.invoke=CONFIG.CHEFE["invoca A cada"];}if(dist(player,boss)<player.radius+boss.r)damagePlayer(boss.attack, boss.x,boss.y);if(boss.hp<=0){for(let i=0;i<CONFIG.ECONOMIA.ovosChefe;i++)drops.push({x:boss.x+rand(-25,25),y:boss.y+rand(-25,25),r:9,life:CONFIG.ECONOMIA.tempoVidaDrop,value:1});boss=null;}}
+ updateEnemies(dt);updateShots(dt);updateDrops(dt);updateCompanions(dt);updateEffects(dt);updateParticles(dt);
+ if(spawned>=spawnTarget&&enemies.length===0&&!boss){finishWave();}
+ updateHud();
+}
+function updatePlayer(dt){
+ let dx=0,dy=0,targetX=mouse.x,targetY=mouse.y;
+ if(CONFIG.MODO_CONTROLE==="C"){dx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);dy=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0);const l=Math.hypot(dx,dy)||1;dx/=l;dy/=l;}
+ else {if(touchMove){targetX=touchMove.x;targetY=touchMove.y;}dx=targetX-player.x;dy=targetY-player.y;const d=Math.hypot(dx,dy);if(d>8){dx/=d;dy/=d;}else{dx=0;dy=0;}}
+ let firing=(CONFIG.MODO_CONTROLE==="A"&&(mouse.down||touchFire))||(CONFIG.MODO_CONTROLE==="B")||(CONFIG.MODO_CONTROLE==="C"&&(mouse.down||touchFire));
+ let speed=player.speed*(firing&&CONFIG.MODO_CONTROLE!=="B"?CONFIG.PLAYER.velocidadeAtirando:1);
+ if(CONFIG.MODO_CONTROLE==="C"){player.vx+=(dx*speed-player.vx)*Math.min(1,CONFIG.PLAYER.aceleracao*dt/speed);player.vy+=(dy*speed-player.vy)*Math.min(1,CONFIG.PLAYER.aceleracao*dt/speed);}
+ else {player.vx+=(dx*speed-player.vx)*Math.min(1,CONFIG.PLAYER.aceleracao*dt/speed);player.vy+=(dy*speed-player.vy)*Math.min(1,CONFIG.PLAYER.aceleracao*dt/speed);}
+ player.x=clamp(player.x+player.vx*dt,player.radius,800-player.radius);player.y=clamp(player.y+player.vy*dt,player.radius,500-player.radius);
+ if(Math.hypot(player.vx,player.vy)>20){player.faceX=player.vx/Math.hypot(player.vx,player.vy);player.faceY=player.vy/Math.hypot(player.vx,player.vy);}
+ if(firing)shoot();
+}
+function updateEnemies(dt){
+ for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];e.hit=Math.max(0,e.hit-dt);if(e.stun>0){e.stun-=dt;continue;}const dx=player.x-e.x,dy=player.y-e.y,len=Math.hypot(dx,dy)||1;e.x+=dx/len*e.speed*dt;e.y+=dy/len*e.speed*dt;if(len<player.radius+e.r)damagePlayer(Math.max(1,e.damage-(player.armor||0)),e.x,e.y);
+ for(let j=i-1;j>=0;j--){const o=enemies[j],ox=e.x-o.x,oy=e.y-o.y,d=Math.hypot(ox,oy)||.01,min=e.r+o.r;if(d<min){const push=(min-d)*.5;e.x+=ox/d*push;e.y+=oy/d*push;o.x-=ox/d*push;o.y-=oy/d*push;}}
+ }}
+function updateShots(dt){for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;let hit=false;for(let j=enemies.length-1;j>=0;j--){const e=enemies[j];if(Math.hypot(s.x-e.x,s.y-e.y)<s.r+e.r){e.hp-=s.damage;e.hit=.12;floatTexts.push({x:e.x,y:e.y-15,text:Math.round(s.damage),life:.55,color:"#fff2a8"});if(e.hp<=0)killEnemy(e);hit=true;break;}}if(!hit&&boss&&Math.hypot(s.x-boss.x,s.y-boss.y)<s.r+boss.r){boss.hp-=s.damage;boss.hit=.12;floatTexts.push({x:boss.x,y:boss.y-boss.r,text:Math.round(s.damage),life:.55,color:"#fff2a8"});hit=true;}if(hit||s.life<=0||s.x< -20||s.x>820||s.y< -20||s.y>520)shots.splice(i,1);}}
+function updateDrops(dt){for(let i=drops.length-1;i>=0;i--){const d=drops[i];d.life-=dt;const dx=player.x-d.x,dy=player.y-d.y,len=Math.hypot(dx,dy)||1;if(len<player.magnet){const f=1-len/player.magnet;d.x+=dx/len*CONFIG.ECONOMIA.velocidadeAtracao*f*dt;d.y+=dy/len*CONFIG.ECONOMIA.velocidadeAtracao*f*dt;}if(len<player.radius+d.r+5){eggs+=d.value;drops.splice(i,1);}else if(d.life<=0)drops.splice(i,1);}}
+function updateCompanions(dt){if(galoLevel>0){if(galoTimer<=0)rooster={x:player.x-32,y:player.y-30};galoTimer=CONFIG.GALO.duracao;galoAttackTimer-=dt;if(galoAttackTimer<=0){let target=nearestEnemy();if(target&&dist(player,target)<CONFIG.GALO.alcance+70){for(const e of enemies){if(dist(rooster||player,e)<CONFIG.GALO.alcance+galoLevel*CONFIG.GALO.melhoriaAlcance)e.hp-=CONFIG.GALO.dano+galoLevel*CONFIG.GALO.melhoriaDano;}for(let i=enemies.length-1;i>=0;i--)if(enemies[i].hp<=0)killEnemy(enemies[i]);galoAttackTimer=CONFIG.GALO.recargaGolpe;}}if(rooster){rooster.x+=(player.x-32-rooster.x)*Math.min(1,dt*5);rooster.y+=(player.y-30-rooster.y)*Math.min(1,dt*5);}}}
+function updateEffects(dt){for(const e of shockEffects){e.t+=dt;e.r=e.max*Math.min(1,e.t/.25);}shockEffects=shockEffects.filter(e=>e.t<.45);for(const t of floatTexts){t.y-=25*dt;t.life-=dt;}floatTexts=floatTexts.filter(t=>t.life>0);}
+function updateParticles(dt){for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;}particles=particles.filter(p=>p.life>0);}
+function updateHud(){ui.health.textContent="❤️".repeat(player.health)+"🖤".repeat(Math.max(0,player.maxHealth-player.health));ui.eggs.textContent="🥚 "+eggs;ui.wave.textContent="Onda "+wave;ui.scene.textContent=CONFIG.CENARIOS[sceneKey].nome;ui.special.textContent=specialCooldown<=0?"Especial: PRONTO":"Especial: "+specialCooldown.toFixed(1)+"s";specialBtn.style.opacity=specialCooldown<=0?"1":".55";}
+
+function draw(){
+ ctx.save();if(shake>0)ctx.translate(rand(-5,5),rand(-5,5));drawBackground();if(state===STATES.INTRO){drawIntro();ctx.restore();return;}
+ for(const d of drops){ctx.font="20px sans-serif";ctx.textAlign="center";ctx.fillText("🥚",d.x,d.y+7);if(d.life<3&&Math.floor(elapsed*8)%2===0)continue;}
+ for(const s of shots){ctx.fillStyle="#fff4b0";ctx.beginPath();ctx.ellipse(s.x,s.y,5,7,Math.atan2(s.vy,s.vx),0,Math.PI*2);ctx.fill();ctx.strokeStyle="#b78c45";ctx.stroke();}
+ for(const e of enemies){drawEnemy(e);}
+ if(boss)drawBoss();
+ if(rooster){ctx.font="38px sans-serif";ctx.textAlign="center";ctx.fillText("🐓",rooster.x,rooster.y+12);}
+ drawPlayer();
+ for(const p of particles){ctx.font="15px sans-serif";ctx.globalAlpha=clamp(p.life*2,0,1);ctx.fillText(p.emoji,p.x,p.y);}
+ ctx.globalAlpha=1;
+ for(const t of floatTexts){ctx.globalAlpha=clamp(t.life*2,0,1);ctx.fillStyle=t.color;ctx.font="bold 15px system-ui";ctx.textAlign="center";ctx.fillText(t.text,t.x,t.y);}ctx.globalAlpha=1;
+ for(const e of shockEffects){ctx.strokeStyle="#fff18a";ctx.lineWidth=5*(1-e.t/.45);ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.stroke();}
+ if(boss){ctx.fillStyle="#281c18";ctx.fillRect(200,12,400,13);ctx.fillStyle="#df3d32";ctx.fillRect(200,12,400*clamp(boss.hp/boss.maxHp,0,1),13);ctx.strokeStyle="#fff";ctx.strokeRect(200,12,400,13);ctx.fillStyle="#fff";ctx.font="bold 12px system-ui";ctx.textAlign="center";ctx.fillText("CHEF-FAZENDEIRO",400,10);}
+ if(bannerTime>0){ctx.fillStyle="#171717bb";ctx.fillRect(260,205,280,64);ctx.fillStyle="#fff";ctx.font="bold 30px system-ui";ctx.textAlign="center";ctx.fillText(banner,400,247);}
+ if(state===STATES.PAUSA){ctx.fillStyle="#0009";ctx.fillRect(0,0,800,500);ctx.fillStyle="#fff";ctx.font="bold 42px system-ui";ctx.textAlign="center";ctx.fillText("PAUSADO",400,245);ctx.font="18px system-ui";ctx.fillText("Pressione P ou Esc para continuar",400,280);}
+ ctx.restore();
+ if(fade.active){ctx.fillStyle=`rgba(0,0,0,${fade.alpha})`;ctx.fillRect(0,0,800,500);}
+}
+function drawBackground(){const s=CONFIG.CENARIOS[sceneKey]||CONFIG.CENARIOS.fazenda;ctx.fillStyle=s.fundo;ctx.fillRect(0,0,800,500);
+ if(sceneKey==="fazenda"){ctx.strokeStyle="#e4d5a0";ctx.lineWidth=8;for(let x=0;x<850;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,500);ctx.stroke();}ctx.strokeStyle="#8c653b";ctx.lineWidth=5;for(let y of [65,435]){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(800,y);ctx.stroke();}for(let i=0;i<90;i++){ctx.fillStyle=i%2?"#5d8d43":"#8bb65c";ctx.fillRect((i*97)%800,(i*53)%500,3,3);}}
+ if(sceneKey==="cozinha"){ctx.strokeStyle="#a9bfbc";ctx.lineWidth=2;for(let x=0;x<800;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,500);ctx.stroke();}for(let y=0;y<500;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(800,y);ctx.stroke();}}
+ if(sceneKey==="feira"){for(let x=0;x<800;x+=100){ctx.fillStyle=x%200===0?"#b83c35":"#f2d8a3";ctx.fillRect(x,0,100,65);ctx.fillStyle="#4d3c2b";ctx.fillRect(x,65,5,435);}ctx.fillStyle="#d9bd81";ctx.fillRect(0,80,800,420);}
+ if(sceneKey==="restaurante"){for(let y=0;y<500;y+=42){ctx.fillStyle=y%84===0?"#a16e49":"#b98258";ctx.fillRect(0,y,800,42);ctx.strokeStyle="#805638";ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(800,y);ctx.stroke();}ctx.fillStyle="#68452e";ctx.beginPath();ctx.ellipse(400,250,92,57,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#c99b6c";ctx.beginPath();ctx.ellipse(400,238,92,57,0,0,Math.PI*2);ctx.fill();}
+}
+function drawPlayer(){if(player.invuln>0&&Math.floor(elapsed*14)%2===0)return;ctx.font="34px sans-serif";ctx.textAlign="center";ctx.fillText("🐔",player.x,player.y+12);ctx.strokeStyle="#fff";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(player.x,player.y,player.radius+3,0,Math.PI*2);ctx.stroke();if(mouse.inside){ctx.strokeStyle="#fff8";ctx.lineWidth=2;ctx.beginPath();ctx.arc(mouse.x,mouse.y,10,0,Math.PI*2);ctx.moveTo(mouse.x-15,mouse.y);ctx.lineTo(mouse.x+15,mouse.y);ctx.moveTo(mouse.x,mouse.y-15);ctx.lineTo(mouse.x,mouse.y+15);ctx.stroke();}}
+function drawEnemy(e){const d=CONFIG.INIMIGOS[e.type];ctx.font=(e.r*2+8)+"px sans-serif";ctx.textAlign="center";if(e.hit>0){ctx.globalAlpha=.5;}ctx.fillText(d.sprite,e.x,e.y+e.r*.55);ctx.globalAlpha=1;if(e.hp<e.maxHp){ctx.fillStyle="#321";ctx.fillRect(e.x-e.r,e.y-e.r-8,e.r*2,4);ctx.fillStyle="#7bd36b";ctx.fillRect(e.x-e.r,e.y-e.r-8,e.r*2*clamp(e.hp/e.maxHp,0,1),4);}}
+function drawBoss(){ctx.font="62px sans-serif";ctx.textAlign="center";ctx.fillText("👨‍🍳",boss.x,boss.y+20);ctx.font="28px sans-serif";ctx.fillText("🔱",boss.x+30,boss.y+30);}
+function drawIntro(){ctx.fillStyle="#759c55";ctx.fillRect(0,0,800,500);for(const f of introFeathers){ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.y/100);ctx.fillStyle="#f5f0dc";ctx.beginPath();ctx.ellipse(0,0,f.s/2,4,.4,0,Math.PI*2);ctx.fill();ctx.restore();}ctx.font="72px sans-serif";ctx.textAlign="center";ctx.fillText("🐔",400,285);ctx.fillStyle="#fff";ctx.font="bold 28px system-ui";ctx.fillText("FUGA DA GALINHA",400,100);}
+function loop(t){const dt=Math.min(.05,(t-lastTime)/1000||0);lastTime=t;update(dt);draw();requestAnimationFrame(loop);}
+
+/* ===================== CONTROLES: MOUSE, TECLADO, TOQUE ===================== */
+function pointerPos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*800,y:(e.clientY-r.top)/r.height*500};}
+canvas.addEventListener("pointermove",e=>{const p=pointerPos(e);mouse.x=p.x;mouse.y=p.y;mouse.inside=true;if(e.pointerType==="touch"&&touches.has(e.pointerId)){touchMove=p;}});
+canvas.addEventListener("pointerdown",e=>{const p=pointerPos(e);mouse.x=p.x;mouse.y=p.y;mouse.inside=true;if(e.pointerType==="touch"){touches.set(e.pointerId,p);if(touches.size===1)touchMove=p;else touchFire=true;canvas.setPointerCapture(e.pointerId);}else{mouse.down=true;}});
+canvas.addEventListener("pointerup",e=>{if(e.pointerType==="touch"){touches.delete(e.pointerId);touchMove=touches.size?[...touches.values()][0]:null;touchFire=touches.size>1;}else mouse.down=false;});
+canvas.addEventListener("pointercancel",e=>{touches.delete(e.pointerId);touchMove=null;touchFire=false;mouse.down=false;});
+canvas.addEventListener("pointerleave",()=>{mouse.inside=false;if(!touches.size)mouse.down=false;});
+window.addEventListener("keydown",e=>{const k=e.key.toLowerCase();keys[k]=true;if(k===" "){e.preventDefault();useSpecial();}if(k==="p"||k==="escape"){if(state===STATES.JOGANDO){pausedFrom=state;state=STATES.PAUSA;}else if(state===STATES.PAUSA)state=pausedFrom;}});
+window.addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false;});
+specialBtn.addEventListener("click",useSpecial);
+playBtn.addEventListener("click",()=>{overlay.style.display="none";fadeTo(()=>{resetRun();},.6);});
+window.addEventListener("blur",()=>{mouse.down=false;touchFire=false;keys={};if(state===STATES.JOGANDO){pausedFrom=state;state=STATES.PAUSA;}});
+updateHud=updateHud; // mantém a atualização do HUD centralizada
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
