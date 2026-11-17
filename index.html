@@ -8,25 +8,25 @@
 <style>
 :root{color-scheme:light dark;--bg:#f4f0e5;--panel:#fffaf0;--ink:#28251f;--muted:#716b60;--accent:#d97706;--line:#d8cdb9}
 @media(prefers-color-scheme:dark){:root{--bg:#171914;--panel:#24281f;--ink:#f4f0e5;--muted:#c2bba9;--accent:#f4a62a;--line:#454b3c}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;min-height:100vh;padding:12px}
-#app{width:min(100%,1000px);display:grid;gap:10px}
-header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+*{box-sizing:border-box}html,body{width:100%;height:100%;min-height:100%}body{margin:0;background:#10140f;color:#fff;font:15px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;width:100%;height:100%;overflow:hidden}
+#app{position:relative;width:100vw;height:100vh;height:100dvh;max-width:none;overflow:hidden;background:#10140f}
+header{position:absolute;z-index:4;top:clamp(12px,2.5vh,26px);left:clamp(14px,2.5vw,30px);right:clamp(14px,2.5vw,30px);display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;color:#fff;text-shadow:0 2px 8px #000}
 h1{font-size:clamp(1.25rem,3vw,1.8rem);margin:0} .sub{color:var(--muted);font-size:.88rem}
-#frame{position:relative;width:100%;aspect-ratio:8/5;background:#20251e;border:3px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 12px 35px #0002}
+#frame{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;background:#20251e;border:0;border-radius:0;overflow:hidden;box-shadow:none}
 canvas{display:block;width:100%;height:100%;touch-action:none;image-rendering:pixelated}
-.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:#111a;backdrop-filter:blur(3px)}
-.panel{width:min(620px,96%);max-height:94%;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:clamp(14px,3vw,24px);box-shadow:0 12px 35px #0005}
-.panel h2{margin:0 0 8px;font-size:clamp(1.35rem,4vw,2rem)}.panel p{margin:7px 0;color:var(--muted)}
-button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:11px 16px;background:var(--accent);color:#21180b;cursor:pointer}
+.overlay{position:absolute;z-index:10;inset:0;display:flex;align-items:center;justify-content:center;padding:clamp(14px,4vw,36px);background:radial-gradient(ellipse at center,#09120bd9 0%,#050805f2 78%);backdrop-filter:blur(5px)}
+.panel{width:min(680px,96%);max-height:92%;overflow:auto;background:linear-gradient(150deg,#20291ff5,#101710f7);color:#f5f3e9;border:1px solid #84936b66;border-radius:20px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px #000b;text-align:center}.panel.menu-panel{width:min(560px,94vw);padding:clamp(28px,5vw,54px)}.menu-kicker{font-size:.78rem;letter-spacing:.28em;text-transform:uppercase;color:#c3d18c;font-weight:800}.menu-panel h2{font-size:clamp(2.4rem,7vw,4.5rem);line-height:.98;letter-spacing:-.045em;margin:14px 0 12px;text-shadow:0 5px 25px #a9d35b44}.menu-description{max-width:440px;margin:0 auto 22px!important;color:#d3dcc8!important}.menu-buttons{display:grid;gap:11px;width:min(330px,100%);margin:22px auto 0}.menu-buttons button{width:100%;padding:15px 20px;border-radius:12px;font-size:1.02rem;letter-spacing:.04em}.menu-buttons button.primary{background:linear-gradient(135deg,#f4c45e,#d98a29);color:#231708;box-shadow:0 7px 24px #d98a2940}.menu-buttons button.secondary{background:#ffffff0b;border:1px solid #d6e0c455;color:#f5f3e9}.menu-note{font-size:.78rem;color:#aebba2;margin-top:24px!important}
+.panel h2{margin:0 0 12px;font-size:clamp(1.5rem,4vw,2.4rem)}.panel p{margin:9px 0;color:#d0d9c9}.panel strong{color:#fff}
+button{font:inherit;font-weight:800;border:0;border-radius:10px;padding:11px 16px;background:var(--accent);color:#21180b;cursor:pointer;transition:transform .16s ease,filter .16s ease,background .16s ease}button:hover{filter:brightness(1.08);transform:translateY(-1px)}button:active{transform:translateY(1px)}
 button:disabled{opacity:.42;cursor:not-allowed}button.secondary{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
 .card{border:2px solid var(--line);border-radius:12px;padding:12px;background:color-mix(in srgb,var(--panel),var(--bg) 35%);display:flex;flex-direction:column;gap:6px;min-height:145px}
 .card.common{border-color:#9ca3af}.card.rare{border-color:#3b82f6}.card.epic{border-color:#a855f7}.card strong{font-size:1rem}.card small{color:var(--muted)}
-.card button{margin-top:auto;padding:8px}.hud{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;font-weight:700}
-.hud span{background:var(--panel);border:1px solid var(--line);padding:6px 10px;border-radius:9px}
-#specialBtn{position:absolute;right:12px;bottom:12px;z-index:2;border-radius:50%;width:72px;height:72px;padding:5px;background:#f4b942;color:#241805;border:3px solid #fff8;box-shadow:0 3px 12px #0005}
+.card button{margin-top:auto;padding:8px}.hud{position:absolute;z-index:4;top:clamp(76px,10vh,100px);left:clamp(14px,2.5vw,30px);right:clamp(14px,2.5vw,30px);display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;font-weight:800;pointer-events:none}
+.hud span{background:#10170fc9;color:#fff;border:1px solid #d9e7c344;padding:7px 11px;border-radius:10px;backdrop-filter:blur(8px);box-shadow:0 3px 12px #0003}
+#specialBtn{position:absolute;right:clamp(16px,3vw,36px);bottom:clamp(16px,3vh,32px);z-index:5;border-radius:50%;width:82px;height:82px;padding:5px;background:#f4b942;color:#241805;border:3px solid #fff8;box-shadow:0 3px 18px #0008}
 #pauseHint{font-size:.8rem;color:var(--muted)}
-@media(max-width:560px){body{padding:5px}#app{gap:6px}.cards{grid-template-columns:1fr}.card{min-height:115px}.panel{padding:12px}#specialBtn{width:62px;height:62px;font-size:.78rem}}
+@media(max-width:700px){.hud{top:88px;justify-content:flex-start;gap:5px}.hud span{font-size:.78rem;padding:5px 7px}header{top:10px}header h1{font-size:1.1rem}#pauseHint{font-size:.68rem;max-width:210px}.cards{grid-template-columns:1fr}.card{min-height:115px}#specialBtn{width:66px;height:66px;font-size:.78rem}}
 </style>
 </head>
 <body>
@@ -38,17 +38,8 @@ button:disabled{opacity:.42;cursor:not-allowed}button.secondary{background:trans
 <div id="frame">
 <canvas id="game" width="800" height="500" aria-label="Arena do jogo"></canvas>
 <button id="specialBtn" title="Usar habilidade especial">🐔<br>Especial</button>
-<div class="overlay" id="overlay">
- <div class="panel">
-  <h2>🐔 Fuga da Galinha</h2>
-  <p><b>Fuja antes de virar jantar!</b> Sobreviva às ondas, colete ovos e compre melhorias para resistir aos cozinheiros e seus comparsas.</p>
-  <p><b>Controles:</b> mova o cursor para guiar a galinha; segure o clique esquerdo para lançar ovos na direção da mira. No celular, arraste para mover e use o botão Especial. Tecla Espaço ativa o especial; P ou Esc pausa.</p>
-  <p>O galo gigante pode virar seu melhor amigo. Ou seu último recurso. 🐓</p>
-  <div class="actions"><button id="playBtn">Jogar</button></div>
- </div>
+<div class="overlay" id="overlay"></div>
 </div>
-</div>
-<footer class="sub">Dica: não fique encurralado. Ovos coletados financiam as cartas entre as ondas.</footer>
 </div>
 <script>
 "use strict";
@@ -60,11 +51,11 @@ const CONFIG = {
   MODO_CONTROLE: "A", // "A": clique para atirar; "B": automático; "C": WASD + mouse para mirar
   PLAYER: { velocidade: 235, aceleracao: 900, raio: 15, vidaInicial: 5, invulnerabilidade: 1.0, knockback: 185, velocidadeAtirando: 0.68 },
   COMBATE: { danoOvo: 22, velocidadeOvo: 470, cadencia: 0.42, alcanceOvo: 520, projeteis: 1, dispersao: 0.16, raioOvo: 5 },
-  ONDAS: { inimigosBase: 7, inimigosPorOnda: 2, vidaPorOnda: 0.15, danoPorOnda: 0.045, intervaloSpawnBase: 1.15, intervaloSpawnMin: 0.34, duracaoBanner: 1.45, bonusOvos: 3, chefeA cada: 5 },
+  ONDAS: { inimigosBase: 7, inimigosPorOnda: 2, vidaPorOnda: 0.15, danoPorOnda: 0.045, intervaloSpawnBase: 1.15, intervaloSpawnMin: 0.34, duracaoBanner: 1.45, bonusOvos: 3, chefeACada: 5 },
   ECONOMIA: { chanceOvoComum: 0.35, chanceOvoRapido: 0.20, chanceOvoTanque: 0.80, ovosChefe: 9, tempoVidaDrop: 13, raioAtracao: 92, velocidadeAtracao: 260, bonusFimOnda: 3, custoBase: 5, aumentoCompra: 1.32 },
   ESPECIAL: { recarga: 20, reducaoPorAbate: 0.75, raio: 112, dano: 18, atordoamento: 2.0, tremor: 0.22 },
   GALO: { duracao: 10, recargaGolpe: 0.85, dano: 26, alcance: 105, melhoriaDano: 9, melhoriaAlcance: 9 },
-  CHEFE: { vidaBase: 850, velocidade: 58, dano: 2, raio: 34, invocaA cada: 3.8, quantidadeInvocada: 2 },
+  CHEFE: { vidaBase: 850, velocidade: 58, dano: 2, raio: 34, invocaACada: 3.8, quantidadeInvocada: 2 },
   CARTAS: { quantidadeAleatoria: 3, curaPenas: 1, maxProjeteis: 3 },
   CENARIOS: {
     fazenda: { nome:"Fazenda", ondas:[1,2], fundo:"#759c55", tipos:["fazendeiro","fazendeiroRapido","fazendeiroTanque"] },
@@ -90,7 +81,7 @@ const CONFIG = {
 
 /* ===================== DADOS E ESTADO ===================== */
 const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
-const overlay=document.getElementById("overlay"),playBtn=document.getElementById("playBtn"),specialBtn=document.getElementById("specialBtn");
+const overlay=document.getElementById("overlay"),specialBtn=document.getElementById("specialBtn");
 const ui={health:document.getElementById("health"),eggs:document.getElementById("eggs"),wave:document.getElementById("wave"),scene:document.getElementById("scene"),special:document.getElementById("specialHud")};
 const STATES={INTRO:"INTRO",FADE_OUT:"FADE_OUT",JOGANDO:"JOGANDO",LOJA:"LOJA",TROCA:"TROCA_DE_CENARIO",GAME_OVER:"GAME_OVER",PAUSA:"PAUSA"};
 let state=STATES.INTRO,previousState=STATES.JOGANDO,fade={active:false,alpha:0,phase:0,duration:.6,callback:null};
@@ -104,14 +95,70 @@ let introFeathers=Array.from({length:18},()=>({x:Math.random()*800,y:Math.random
 const rand=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 function makePlayer(){return {x:400,y:250,vx:0,vy:0,health:CONFIG.PLAYER.vidaInicial,maxHealth:CONFIG.PLAYER.vidaInicial,invuln:0,fire:0,faceX:1,faceY:0,damage:CONFIG.COMBATE.danoOvo,fireRate:CONFIG.COMBATE.cadencia,projectiles:CONFIG.COMBATE.projeteis,speed:CONFIG.PLAYER.velocidade,magnet:CONFIG.ECONOMIA.raioAtracao,eggValue:1};}
 function getSceneForWave(n){for(const [key,s] of Object.entries(CONFIG.CENARIOS)){if(n>=s.ondas[0]&&n<=s.ondas[1])return key;}return "restaurante";}
-function isBossWave(n){return n%CONFIG.ONDAS["chefe A cada"]===0;}
+function isBossWave(n){return n%CONFIG.ONDAS.chefeACada===0;}
 function getEnemyTypes(){return CONFIG.CENARIOS[sceneKey].tipos;}
 function clearArena(){enemies=[];shots=[];drops=[];particles=[];floatTexts=[];chicks=[];boss=null;rooster=null;shockEffects=[];}
 function resetRun(){wave=1;sceneKey="fazenda";eggs=0;kills=0;spawned=0;spawnTimer=0;specialCooldown=0;galoLevel=0;galoTimer=0;galoAttackTimer=0;upgradesBought={};stats={};player=makePlayer();clearArena();startWave();}
 function fadeTo(callback,duration=.6){fade={active:true,alpha:0,phase:1,duration,callback};state=STATES.FADE_OUT;}
-function startGame(){fadeTo(()=>{resetRun();overlay.style.display="none";},.6);}
+function setGameChrome(visible){
+  const header=document.querySelector("header"),hud=document.getElementById("hud");
+  header.style.display=visible?"flex":"none";
+  hud.style.display=visible?"flex":"none";
+  specialBtn.style.display=visible?"block":"none";
+}
+function renderMainMenu(){
+  setGameChrome(false);
+  overlay.style.display="flex";
+  overlay.innerHTML=`<div class="panel menu-panel">
+    <div class="menu-kicker">Uma aventura de sobrevivência</div>
+    <h2>🐔 FUGA DA<br>GALINHA</h2>
+    <p class="menu-description"><strong>Fuja antes de virar jantar!</strong><br>Enfrente ondas de perseguidores, colete ovos e sobreviva para descobrir até onde a galinha consegue chegar.</p>
+    <div class="menu-buttons">
+      <button class="primary" data-menu-action="play">▶ JOGAR</button>
+      <button class="secondary" data-menu-action="how">COMO JOGAR</button>
+      <button class="secondary" data-menu-action="credits">CRÉDITOS</button>
+    </div>
+    <p class="menu-note">Prepare as penas. A cozinha não vai esperar.</p>
+  </div>`;
+}
+function renderHowToPlay(){
+  overlay.innerHTML=`<div class="panel">
+    <div class="menu-kicker">Manual de sobrevivência</div>
+    <h2>Como jogar</h2>
+    <p><strong>Movimentação:</strong> mova o mouse para guiar a galinha pela arena.</p>
+    <p><strong>Atacar:</strong> segure o botão esquerdo do mouse para lançar ovos na direção da mira.</p>
+    <p><strong>Celular:</strong> arraste um dedo para se movimentar; use um segundo toque simultâneo para lançar ovos. O botão 🐔 ativa o especial.</p>
+    <p><strong>Habilidade especial:</strong> pressione <b>Espaço</b> ou toque no botão Especial para atingir e atordoar inimigos próximos. Ela possui recarga.</p>
+    <p><strong>Pausar:</strong> pressione <b>P</b> ou <b>Esc</b>.</p>
+    <p><strong>Objetivo:</strong> sobreviva às ondas, colete ovos dos inimigos e compre melhorias entre as ondas. A cada cinco ondas, prepare-se para um chefe!</p>
+    <div class="menu-buttons"><button class="primary" data-menu-action="back">VOLTAR AO MENU</button></div>
+  </div>`;
+}
+function renderCredits(){
+  overlay.innerHTML=`<div class="panel">
+    <div class="menu-kicker">Nos bastidores</div>
+    <h2>Créditos</h2>
+    <p><strong>Fuga da Galinha</strong></p>
+    <p>Um jogo independente de sobrevivência em ondas.</p>
+    <p>Desenvolvimento: projeto criado em HTML5 Canvas, CSS e JavaScript.</p>
+    <p>Conceito, personagens e universo: projeto Fuga da Galinha.</p>
+    <p>Feito com penas, ovos e uma quantidade questionável de cacarejos. 🐔</p>
+    <div class="menu-buttons"><button class="primary" data-menu-action="back">VOLTAR AO MENU</button></div>
+  </div>`;
+}
+function startGame(){
+  setGameChrome(true);
+  overlay.style.display="none";
+  try{
+    if(!document.fullscreenElement&&document.documentElement.requestFullscreen){
+      const request=document.documentElement.requestFullscreen({navigationUI:"hide"});
+      if(request&&request.catch)request.catch(()=>{});
+    }
+  }catch(error){/* O jogo continua em janela caso a tela cheia não seja permitida. */}
+  fadeTo(()=>{resetRun();},.55);
+}
 function startWave(){clearArena();spawned=0;const bossWave=isBossWave(wave);spawnTarget=bossWave?Math.max(7,CONFIG.ONDAS.inimigosBase+wave*CONFIG.ONDAS.inimigosPorOnda):CONFIG.ONDAS.inimigosBase+wave*CONFIG.ONDAS.inimigosPorOnda;spawnTimer=.55;banner=bossWave?"⚠️ CHEFE!":"Onda "+wave;bannerTime=CONFIG.ONDAS.duracaoBanner;state=STATES.JOGANDO;if(bossWave)spawnBoss();}
-function spawnBoss(){boss={x:400,y:65,vx:0,vy:0,r:CONFIG.CHEFE.raio,hp:CONFIG.CHEFE.vidaBase*Math.pow(1+CONFIG.ONDAS.vidaPorOnda,wave-1),maxHp:CONFIG.CHEFE.vidaBase*Math.pow(1+CONFIG.ONDAS.vidaPorOnda,wave-1),attack:CONFIG.CHEFE.dano,invoke:CONFIG.CHEFE["invoca A cada"],hit:0};}
+function spawnBoss(){boss={x:400,y:65,vx:0,vy:0,r:CONFIG.CHEFE.raio,hp:CONFIG.CHEFE.vidaBase*Math.pow(1+CONFIG.ONDAS.vidaPorOnda,wave-1),maxHp:CONFIG.CHEFE.vidaBase*Math.pow(1+CONFIG.ONDAS.vidaPorOnda,wave-1),attack:CONFIG.CHEFE.dano,invoke:CONFIG.CHEFE.invocaACada,hit:0};}
 function spawnEnemy(type,fromBoss=false){const def=CONFIG.INIMIGOS[type];if(!def)return;const side=Math.floor(Math.random()*4);let x=side===0?rand(0,800):side===1?rand(0,800):side===2?-18:818;let y=side===2||side===3?rand(0,500):side===0?-18:518;const scale=Math.pow(1+CONFIG.ONDAS.vidaPorOnda,wave-1);enemies.push({type,x,y,r:def.raio,hp:def.vida*scale,maxHp:def.vida*scale,speed:def.velocidade*(1+Math.min(.22,(wave-1)*.012)),damage:def.dano,stun:0,hit:0,fromBoss});}
 function chooseEnemyType(){const types=getEnemyTypes();if(wave<3)return types[0];const roll=Math.random();return types[roll<.55?0:roll<.79?1:2];}
 function shoot(){if(player.fire>0)return;let tx=mouse.x,ty=mouse.y;if(CONFIG.MODO_CONTROLE==="B"){const target=nearestEnemy();if(!target)return;tx=target.x;ty=target.y;}const dx=tx-player.x,dy=ty-player.y,len=Math.hypot(dx,dy)||1;player.faceX=dx/len;player.faceY=dy/len;const count=player.projectiles;for(let i=0;i<count;i++){const angle=Math.atan2(dy,dx)+(i-(count-1)/2)*CONFIG.COMBATE.dispersao;shots.push({x:player.x+Math.cos(angle)*18,y:player.y+Math.sin(angle)*18,vx:Math.cos(angle)*CONFIG.COMBATE.velocidadeOvo,vy:Math.sin(angle)*CONFIG.COMBATE.velocidadeOvo,life:CONFIG.COMBATE.alcanceOvo/CONFIG.COMBATE.velocidadeOvo,damage:player.damage,r:CONFIG.COMBATE.raioOvo});}player.fire=player.fireRate;}
@@ -144,7 +191,7 @@ function update(dt){
  updatePlayer(dt);
  const bossWave=isBossWave(wave);
  if(spawned<spawnTarget){spawnTimer-=dt;const interval=Math.max(CONFIG.ONDAS.intervaloSpawnMin,CONFIG.ONDAS.intervaloSpawnBase-wave*.045);if(spawnTimer<=0){spawnEnemy(chooseEnemyType());spawned++;spawnTimer=interval;}}
- if(boss){boss.invoke-=dt;boss.hit=Math.max(0,boss.hit-dt);const dx=player.x-boss.x,dy=player.y-boss.y,len=Math.hypot(dx,dy)||1;boss.x+=dx/len*CONFIG.CHEFE.velocidade*dt;boss.y+=dy/len*CONFIG.CHEFE.velocidade*dt;if(boss.invoke<=0){for(let i=0;i<CONFIG.CHEFE.quantidadeInvocada;i++){const types=Object.keys(CONFIG.INIMIGOS);spawnEnemy(types[Math.floor(Math.random()*types.length)],true);}boss.invoke=CONFIG.CHEFE["invoca A cada"];}if(dist(player,boss)<player.radius+boss.r)damagePlayer(boss.attack, boss.x,boss.y);if(boss.hp<=0){for(let i=0;i<CONFIG.ECONOMIA.ovosChefe;i++)drops.push({x:boss.x+rand(-25,25),y:boss.y+rand(-25,25),r:9,life:CONFIG.ECONOMIA.tempoVidaDrop,value:1});boss=null;}}
+ if(boss){boss.invoke-=dt;boss.hit=Math.max(0,boss.hit-dt);const dx=player.x-boss.x,dy=player.y-boss.y,len=Math.hypot(dx,dy)||1;boss.x+=dx/len*CONFIG.CHEFE.velocidade*dt;boss.y+=dy/len*CONFIG.CHEFE.velocidade*dt;if(boss.invoke<=0){for(let i=0;i<CONFIG.CHEFE.quantidadeInvocada;i++){const types=Object.keys(CONFIG.INIMIGOS);spawnEnemy(types[Math.floor(Math.random()*types.length)],true);}boss.invoke=CONFIG.CHEFE.invocaACada;}if(dist(player,boss)<player.radius+boss.r)damagePlayer(boss.attack, boss.x,boss.y);if(boss.hp<=0){for(let i=0;i<CONFIG.ECONOMIA.ovosChefe;i++)drops.push({x:boss.x+rand(-25,25),y:boss.y+rand(-25,25),r:9,life:CONFIG.ECONOMIA.tempoVidaDrop,value:1});boss=null;}}
  updateEnemies(dt);updateShots(dt);updateDrops(dt);updateCompanions(dt);updateEffects(dt);updateParticles(dt);
  if(spawned>=spawnTarget&&enemies.length===0&&!boss){finishWave();}
  updateHud();
@@ -200,7 +247,8 @@ function drawPlayer(){if(player.invuln>0&&Math.floor(elapsed*14)%2===0)return;ct
 function drawEnemy(e){const d=CONFIG.INIMIGOS[e.type];ctx.font=(e.r*2+8)+"px sans-serif";ctx.textAlign="center";if(e.hit>0){ctx.globalAlpha=.5;}ctx.fillText(d.sprite,e.x,e.y+e.r*.55);ctx.globalAlpha=1;if(e.hp<e.maxHp){ctx.fillStyle="#321";ctx.fillRect(e.x-e.r,e.y-e.r-8,e.r*2,4);ctx.fillStyle="#7bd36b";ctx.fillRect(e.x-e.r,e.y-e.r-8,e.r*2*clamp(e.hp/e.maxHp,0,1),4);}}
 function drawBoss(){ctx.font="62px sans-serif";ctx.textAlign="center";ctx.fillText("👨‍🍳",boss.x,boss.y+20);ctx.font="28px sans-serif";ctx.fillText("🔱",boss.x+30,boss.y+30);}
 function drawIntro(){ctx.fillStyle="#759c55";ctx.fillRect(0,0,800,500);for(const f of introFeathers){ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.y/100);ctx.fillStyle="#f5f0dc";ctx.beginPath();ctx.ellipse(0,0,f.s/2,4,.4,0,Math.PI*2);ctx.fill();ctx.restore();}ctx.font="72px sans-serif";ctx.textAlign="center";ctx.fillText("🐔",400,285);ctx.fillStyle="#fff";ctx.font="bold 28px system-ui";ctx.fillText("FUGA DA GALINHA",400,100);}
-function loop(t){const dt=Math.min(.05,(t-lastTime)/1000||0);lastTime=t;update(dt);draw();requestAnimationFrame(loop);}
+function loop(t){const dt=Math.min(.05,(t-lastTime)/1000||0);lastTime=t;update(dt);draw();renderMainMenu();
+requestAnimationFrame(loop);}
 
 /* ===================== CONTROLES: MOUSE, TECLADO, TOQUE ===================== */
 function pointerPos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*800,y:(e.clientY-r.top)/r.height*500};}
@@ -212,7 +260,15 @@ canvas.addEventListener("pointerleave",()=>{mouse.inside=false;if(!touches.size)
 window.addEventListener("keydown",e=>{const k=e.key.toLowerCase();keys[k]=true;if(k===" "){e.preventDefault();useSpecial();}if(k==="p"||k==="escape"){if(state===STATES.JOGANDO){pausedFrom=state;state=STATES.PAUSA;}else if(state===STATES.PAUSA)state=pausedFrom;}});
 window.addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false;});
 specialBtn.addEventListener("click",useSpecial);
-playBtn.addEventListener("click",()=>{overlay.style.display="none";fadeTo(()=>{resetRun();},.6);});
+overlay.addEventListener("click",event=>{
+  const button=event.target.closest("[data-menu-action]");
+  if(!button)return;
+  const action=button.dataset.menuAction;
+  if(action==="play")startGame();
+  else if(action==="how")renderHowToPlay();
+  else if(action==="credits")renderCredits();
+  else if(action==="back")renderMainMenu();
+});
 window.addEventListener("blur",()=>{mouse.down=false;touchFire=false;keys={};if(state===STATES.JOGANDO){pausedFrom=state;state=STATES.PAUSA;}});
 updateHud=updateHud; // mantém a atualização do HUD centralizada
 requestAnimationFrame(loop);
